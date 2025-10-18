@@ -55,10 +55,18 @@ class SeedRecoveryOrchestrator {
       const candidatesPerPosition = new Map<number, string[]>();
       
       // Only process first 11 positions - position 12 is determined by checksum
+      // but we can still use position 12 constraints to filter checksum words
       const blanksToProcess = poemConfig.blanks.filter(blank => blank.position <= 11);
       
-      if (blanksToProcess.length !== 11) {
-        throw new Error(`Expected 11 blanks (positions 1-11), got ${blanksToProcess.length}. Position 12 is determined by BIP39 checksum.`);
+      if (blanksToProcess.length === 0) {
+        throw new Error('No blanks to process found in poem configuration');
+      }
+      
+      if (blanksToProcess.length < 11) {
+        logger.warn('Less than 11 blanks configured', {
+          configured: blanksToProcess.length,
+          expected: 11
+        });
       }
       
       for (const blank of blanksToProcess) {
@@ -95,6 +103,13 @@ class SeedRecoveryOrchestrator {
       const beamSearch = new BeamSearch(Config.BEAM_WIDTH);
       beamSearch.setWordScores(scoredCandidates);
       
+      // Set position 12 constraints if available
+      const position12Blank = poemConfig.blanks.find(b => b.position === 12);
+      if (position12Blank) {
+        beamSearch.setPosition12Constraints(position12Blank);
+        logger.info('Using position 12 poem constraints to filter last words');
+      }
+      
       const searchSpaceSize = beamSearch.getSearchSpaceSize(candidatesPerPosition);
       logger.info('Search space calculated', {
         approximateSize: searchSpaceSize.toExponential(2),
@@ -111,6 +126,16 @@ class SeedRecoveryOrchestrator {
         generatedSeeds: candidateSeeds.length
       });
 
+      // Deduplicate seeds (CRITICAL: remove any remaining duplicates)
+      const uniqueSeeds = SeedRanker.deduplicate(candidateSeeds);
+      if (uniqueSeeds.length < candidateSeeds.length) {
+        logger.warn('Duplicates found in candidate seeds', {
+          original: candidateSeeds.length,
+          unique: uniqueSeeds.length,
+          duplicates: candidateSeeds.length - uniqueSeeds.length
+        });
+      }
+
       // Step 7: Rank seeds
       logger.info('Step 7: Ranking seeds');
       const wordScoresMap = new Map<number, Map<string, number>>();
@@ -120,7 +145,7 @@ class SeedRecoveryOrchestrator {
         wordScoresMap.set(position, scoreMap);
       }
 
-      const rankedSeeds = SeedRanker.rankSeeds(candidateSeeds, wordScoresMap);
+      const rankedSeeds = SeedRanker.rankSeeds(uniqueSeeds, wordScoresMap);
       const tasks = SeedRanker.toTasks(rankedSeeds);
       
       logger.info('Seeds ranked', {
@@ -134,8 +159,19 @@ class SeedRecoveryOrchestrator {
       await this.workerPool.initialize();
 
       // Step 9: Initialize metrics and result handler
-      this.metrics = new MetricsCollector(tasks.length);
       this.resultHandler = new ResultHandler();
+      
+      // Filter out already-checked seeds (CRITICAL: prevents duplicate work)
+      const uncheckedTasks = this.resultHandler.filterUncheckedSeeds(tasks);
+      if (uncheckedTasks.length < tasks.length) {
+        logger.info('Resuming from previous run', {
+          totalSeeds: tasks.length,
+          alreadyChecked: tasks.length - uncheckedTasks.length,
+          remaining: uncheckedTasks.length
+        });
+      }
+      
+      this.metrics = new MetricsCollector(uncheckedTasks.length);
 
       // Set up callbacks
       this.workerPool.onResult((result: SeedCheckResult) => {
@@ -167,9 +203,9 @@ class SeedRecoveryOrchestrator {
 
       // Step 11: Submit tasks to worker pool
       logger.info('Step 9: Starting seed checking');
-      logger.info(`Checking ${tasks.length} seeds with ${Config.WORKER_COUNT} workers`);
+      logger.info(`Checking ${uncheckedTasks.length} seeds with ${Config.WORKER_COUNT} workers`);
       
-      this.workerPool.submitTasks(tasks);
+      this.workerPool.submitTasks(uncheckedTasks);
 
       // Wait for completion or found wallet
       await this.workerPool.waitForCompletion();
@@ -187,7 +223,7 @@ class SeedRecoveryOrchestrator {
 
       // Write final summary
       this.resultHandler.writeSummary(
-        tasks.length,
+        uncheckedTasks.length,
         this.seedsChecked,
         this.seedsChecked * 12,
         totalTime,
