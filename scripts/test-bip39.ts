@@ -6,35 +6,36 @@ import { BIP39Filter } from '../src/2-seed-generator/bip39-filter';
 import { ChecksumValidator } from '../src/2-seed-generator/checksum-validator';
 import { PoemBlank } from '../src/types';
 
-console.log('Testing BIP39 Filtering and Validation\n');
+async function runTests() {
+  console.log('Testing BIP39 Filtering and Validation\n');
 
-// Test 1: Get all BIP39 words
-console.log('=== Test 1: BIP39 Wordlist ===');
-const allWords = BIP39Filter.getAllWords();
-console.log(`Total BIP39 words: ${allWords.length}`);
-console.log(`First 10 words: ${allWords.slice(0, 10).join(', ')}`);
-console.log('✅ Wordlist loaded\n');
+  // Test 1: Get all BIP39 words
+  console.log('=== Test 1: BIP39 Wordlist ===');
+  const allWords = BIP39Filter.getAllWords();
+  console.log(`Total BIP39 words: ${allWords.length}`);
+  console.log(`First 10 words: ${allWords.slice(0, 10).join(', ')}`);
+  console.log('✅ Wordlist loaded\n');
 
-// Test 2: Filter words by constraints
-console.log('=== Test 2: Word Filtering ===');
-const testBlank: PoemBlank = {
-  position: 1,
-  context: "test context with _____ blank",
-  constraints: {
-    length: 5,
-    syllables: 1,
-    pattern: 'noun',
-    semantic_domain: ['test'],
-    rhyme_with: 'wall'
-  }
-};
+  // Test 2: Filter words by constraints
+  console.log('=== Test 2: Word Filtering ===');
+  const testBlank: PoemBlank = {
+    position: 1,
+    context: "test context with _____ blank",
+    constraints: {
+      length: 5,
+      syllables: 1,
+      pattern: 'noun',
+      semantic_domain: ['test'],
+      rhyme_with: 'wall'
+    }
+  };
 
-const filtered = BIP39Filter.filterWords(testBlank, 1);
-console.log(`Filtered candidates: ${filtered.length}`);
-console.log(`Top 10 matches:`, filtered.slice(0, 10).map(f => 
-  `${f.word} (${(f.matchScore * 100).toFixed(0)}%)`
-).join(', '));
-console.log('✅ Filtering works\n');
+  const filtered = await BIP39Filter.filterWords(testBlank, 1);
+  console.log(`Filtered candidates: ${filtered.length}`);
+  console.log(`Top 10 matches:`, filtered.slice(0, 10).map(f => 
+    `${f.word} (${(f.matchScore * 100).toFixed(0)}%)`
+  ).join(', '));
+  console.log('✅ Filtering works\n');
 
 // Test 3: Validate known mnemonic
 console.log('=== Test 3: Mnemonic Validation ===');
@@ -75,4 +76,10 @@ if (validLastWords.length >= 8 && validLastWords.length <= 24) {
   console.log('⚠️  Valid last word count outside typical range\n');
 }
 
-console.log('=== All BIP39 Tests Complete ===');
+  console.log('=== All BIP39 Tests Complete ===');
+}
+
+runTests().catch(error => {
+  console.error('Test failed:', error);
+  process.exit(1);
+});
