@@ -1,0 +1,36 @@
+{
+  "sources": [
+    {
+      "type": "api",
+      "enabled": true,
+      "priority": 1,
+      "comment": "Public APIs (mempool.space, blockstream, etc.)"
+    },
+    {
+      "type": "bitcoin-rpc",
+      "enabled": false,
+      "priority": 2,
+      "config": {
+        "host": "127.0.0.1",
+        "port": 8332,
+        "cookiePath": "/home/bitcoin/.bitcoin/.cookie",
+        "username": "",
+        "password": "",
+        "timeout": 30000
+      },
+      "comment": "Bitcoin Core RPC - Set enabled: true and configure path/credentials"
+    },
+    {
+      "type": "electrum",
+      "enabled": false,
+      "priority": 3,
+      "config": {
+        "host": "electrum.blockstream.info",
+        "port": 50002,
+        "protocol": "ssl",
+        "timeout": 10000
+      },
+      "comment": "Electrum server - Set enabled: true and configure server"
+    }
+  ]
+}

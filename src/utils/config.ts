@@ -39,6 +39,7 @@ export class Config {
   // Paths
   static readonly POEM_CONFIG_PATH = path.join(process.cwd(), 'config', 'poem.json');
   static readonly API_CONFIG_PATH = path.join(process.cwd(), 'config', 'api-endpoints.json');
+  static readonly BITCOIN_SOURCES_PATH = path.join(process.cwd(), 'config', 'bitcoin-sources.json');
   static readonly RESULTS_DIR = path.join(process.cwd(), 'results');
 
   /**
@@ -62,6 +63,26 @@ export class Config {
       return JSON.parse(data) as ApiConfig;
     } catch (error) {
       throw new Error(`Failed to load API config: ${error}`);
+    }
+  }
+
+  /**
+   * Load Bitcoin sources configuration (API, RPC, Electrum)
+   */
+  static loadBitcoinSources(): any {
+    try {
+      if (fs.existsSync(this.BITCOIN_SOURCES_PATH)) {
+        const data = fs.readFileSync(this.BITCOIN_SOURCES_PATH, 'utf-8');
+        return JSON.parse(data);
+      }
+      // Return default if file doesn't exist
+      return {
+        sources: [
+          { type: 'api', enabled: true, priority: 1 }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to load Bitcoin sources config: ${error}`);
     }
   }
 

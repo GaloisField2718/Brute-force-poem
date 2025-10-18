@@ -18,7 +18,6 @@ export class ApiRouter {
   private clients: Map<string, ApiClient> = new Map();
   private rateLimiter: RateLimiter;
   private healthStatus: Map<string, ApiHealth> = new Map();
-  private currentIndex: number = 0;
   private cache: Map<string, BalanceCheckResult> = new Map();
 
   constructor(endpoints: ApiEndpoint[]) {
@@ -70,34 +69,6 @@ export class ApiRouter {
     });
   }
 
-  /**
-   * Get next available endpoint using round-robin with health checks
-   */
-  private getNextAvailableEndpoint(): ApiEndpoint | null {
-    const now = Date.now();
-    const startIndex = this.currentIndex;
-
-    do {
-      const endpoint = this.endpoints[this.currentIndex];
-      const health = this.healthStatus.get(endpoint.name);
-
-      // Move to next endpoint for round-robin
-      this.currentIndex = (this.currentIndex + 1) % this.endpoints.length;
-
-      // Check if endpoint is blacklisted
-      if (health?.blacklistedUntil && now < health.blacklistedUntil) {
-        continue;
-      }
-
-      // Check if endpoint has capacity
-      if (this.rateLimiter.hasCapacity(endpoint.name)) {
-        return endpoint;
-      }
-
-    } while (this.currentIndex !== startIndex);
-
-    return null; // All endpoints exhausted
-  }
 
   /**
    * Check balance for an address with automatic failover
@@ -118,17 +89,25 @@ export class ApiRouter {
 
     let lastError: Error | null = null;
     const attemptedEndpoints: string[] = [];
+    const triedEndpoints = new Set<string>();
 
-    // Try all endpoints
-    for (let attempt = 0; attempt < this.endpoints.length; attempt++) {
-      const endpoint = this.getNextAvailableEndpoint();
-      
-      if (!endpoint) {
-        logger.warn('No available endpoints', { address });
-        await this.sleep(1000); // Wait before retry
+    // Try each endpoint exactly once (not round-robin, but sequential through all)
+    for (const endpoint of this.endpoints) {
+      // Skip if already tried or blacklisted
+      if (triedEndpoints.has(endpoint.name)) {
         continue;
       }
 
+      const health = this.healthStatus.get(endpoint.name);
+      if (health?.blacklistedUntil && now < health.blacklistedUntil) {
+        logger.debug('Skipping blacklisted endpoint', {
+          endpoint: endpoint.name,
+          blacklistedFor: `${Math.round((health.blacklistedUntil - now) / 1000)}s`
+        });
+        continue;
+      }
+
+      triedEndpoints.add(endpoint.name);
       attemptedEndpoints.push(endpoint.name);
 
       try {
