@@ -103,10 +103,17 @@ export class ApiRouter {
    * Check balance for an address with automatic failover
    */
   async checkBalance(address: string): Promise<number> {
-    // Check cache first
+    // Check cache first and validate it's not expired
     const cached = this.cache.get(address);
-    if (cached && (Date.now() - cached.timestamp < Config.CACHE_TTL_MS)) {
-      return cached.balance;
+    const now = Date.now();
+    if (cached) {
+      if (now - cached.timestamp < Config.CACHE_TTL_MS) {
+        logger.debug('Cache hit', { address, age: `${now - cached.timestamp}ms` });
+        return cached.balance;
+      } else {
+        // Remove expired entry
+        this.cache.delete(address);
+      }
     }
 
     let lastError: Error | null = null;
@@ -277,9 +284,39 @@ export class ApiRouter {
   }
 
   /**
-   * Stop all rate limiters
+   * Stop all rate limiters and clean up resources
    */
   async stop(): Promise<void> {
+    logger.info('Stopping API router');
+    
+    // Clear cache
+    this.clearCache();
+    
+    // Stop all rate limiters
     await this.rateLimiter.stopAll();
+    
+    // Clear health status
+    this.healthStatus.clear();
+    
+    logger.info('API router stopped');
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStatistics(): { size: number; oldestEntry: number | null } {
+    const now = Date.now();
+    let oldestTimestamp: number | null = null;
+
+    for (const entry of this.cache.values()) {
+      if (oldestTimestamp === null || entry.timestamp < oldestTimestamp) {
+        oldestTimestamp = entry.timestamp;
+      }
+    }
+
+    return {
+      size: this.cache.size,
+      oldestEntry: oldestTimestamp ? now - oldestTimestamp : null
+    };
   }
 }

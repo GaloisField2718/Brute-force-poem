@@ -42,22 +42,48 @@ export class AddressGenerator {
    * Returns 12 addresses (4 types × 3 indices)
    */
   static deriveAllAddresses(mnemonic: string): DerivedAddress[] {
+    if (!mnemonic || typeof mnemonic !== 'string') {
+      throw new Error('Invalid mnemonic: must be a non-empty string');
+    }
+
+    const words = mnemonic.trim().split(/\s+/);
+    if (words.length !== 12) {
+      throw new Error(`Invalid mnemonic: expected 12 words, got ${words.length}`);
+    }
+
     try {
       const wallet = new HDWallet(mnemonic);
       const addresses: DerivedAddress[] = [];
 
       for (const pathConfig of DERIVATION_PATHS) {
         for (const index of pathConfig.indices) {
-          const address = this.deriveAddress(wallet, pathConfig.type, index);
-          const path = pathConfig.path.replace('{index}', index.toString());
+          try {
+            const address = this.deriveAddress(wallet, pathConfig.type, index);
+            const path = pathConfig.path.replace('{index}', index.toString());
 
-          addresses.push({
-            address,
-            path,
-            type: pathConfig.type,
-            index
-          });
+            if (!address || typeof address !== 'string') {
+              throw new Error(`Failed to derive address for ${pathConfig.type} at index ${index}`);
+            }
+
+            addresses.push({
+              address,
+              path,
+              type: pathConfig.type,
+              index
+            });
+          } catch (derivationError) {
+            logger.error('Failed to derive single address', {
+              type: pathConfig.type,
+              index,
+              error: String(derivationError)
+            });
+            throw derivationError;
+          }
         }
+      }
+
+      if (addresses.length !== 12) {
+        throw new Error(`Expected 12 addresses, but derived ${addresses.length}`);
       }
 
       return addresses;

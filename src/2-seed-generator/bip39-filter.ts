@@ -26,6 +26,18 @@ export class BIP39Filter {
    * Filter BIP39 words based on constraints
    */
   static filterWords(blank: PoemBlank, tolerance: number = 1): FilteredWord[] {
+    if (!blank || !blank.constraints) {
+      throw new Error('Invalid blank: missing constraints');
+    }
+
+    if (blank.constraints.length <= 0) {
+      throw new Error('Invalid constraint: length must be positive');
+    }
+
+    if (blank.constraints.syllables < 0) {
+      throw new Error('Invalid constraint: syllables must be non-negative');
+    }
+
     const constraints = blank.constraints;
     const filtered: FilteredWord[] = [];
 

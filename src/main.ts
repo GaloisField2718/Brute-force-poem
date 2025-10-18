@@ -54,7 +54,14 @@ class SeedRecoveryOrchestrator {
       logger.info('Step 4: Filtering BIP39 words by constraints');
       const candidatesPerPosition = new Map<number, string[]>();
       
-      for (const blank of poemConfig.blanks) {
+      // Only process first 11 positions - position 12 is determined by checksum
+      const blanksToProcess = poemConfig.blanks.filter(blank => blank.position <= 11);
+      
+      if (blanksToProcess.length !== 11) {
+        throw new Error(`Expected 11 blanks (positions 1-11), got ${blanksToProcess.length}. Position 12 is determined by BIP39 checksum.`);
+      }
+      
+      for (const blank of blanksToProcess) {
         logger.info(`Filtering position ${blank.position}`);
         const filtered = BIP39Filter.filterWords(blank, 1);
         const topWords = BIP39Filter.getTopK(filtered, Config.TOP_K_PER_POSITION);
@@ -65,10 +72,10 @@ class SeedRecoveryOrchestrator {
         });
       }
 
-      // Step 5: Score candidates with OpenRouter
+      // Step 5: Score candidates with OpenRouter (only positions 1-11)
       logger.info('Step 5: Scoring candidates with LLM');
       const scoredCandidates = await openRouter.scoreMultiplePositions(
-        poemConfig.blanks,
+        blanksToProcess,
         candidatesPerPosition
       );
 
@@ -189,6 +196,18 @@ class SeedRecoveryOrchestrator {
 
     } catch (error) {
       logger.error('Fatal error in orchestrator', { error: String(error) });
+      
+      // Attempt cleanup
+      this.stopProgressMonitoring();
+      
+      if (this.workerPool) {
+        try {
+          await this.workerPool.shutdown();
+        } catch (cleanupError) {
+          logger.error('Error during cleanup', { error: String(cleanupError) });
+        }
+      }
+      
       throw error;
     }
   }

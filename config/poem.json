@@ -120,17 +120,6 @@
         "rhyme_with": "fate",
         "semantic_domain": ["transformation", "value"]
       }
-    },
-    {
-      "position": 12,
-      "context": "And life, like warm soup or sweet _____ at ease",
-      "constraints": {
-        "length": 5,
-        "pattern": "noun",
-        "syllables": 2,
-        "rhyme_with": "ease",
-        "semantic_domain": ["dessert", "comfort", "sweetness"]
-      }
     }
   ]
 }

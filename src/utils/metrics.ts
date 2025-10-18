@@ -13,9 +13,33 @@ export class MetricsCollector {
   private apiSuccesses: number = 0;
   private totalCheckDuration: number = 0;
   private checkTimestamps: number[] = [];
+  private lastCpuUsage: { idle: number; total: number; timestamp: number } | null = null;
 
   constructor(private totalSeeds: number) {
     this.startTime = Date.now();
+    this.initializeCpuTracking();
+  }
+
+  /**
+   * Initialize CPU tracking baseline
+   */
+  private initializeCpuTracking(): void {
+    const cpus = os.cpus();
+    let totalIdle = 0;
+    let totalTick = 0;
+
+    cpus.forEach(cpu => {
+      for (const type in cpu.times) {
+        totalTick += cpu.times[type as keyof typeof cpu.times];
+      }
+      totalIdle += cpu.times.idle;
+    });
+
+    this.lastCpuUsage = {
+      idle: totalIdle,
+      total: totalTick,
+      timestamp: Date.now()
+    };
   }
 
   /**
@@ -86,9 +110,14 @@ export class MetricsCollector {
   }
 
   /**
-   * Get CPU usage percentage
+   * Get CPU usage percentage (calculated over time)
    */
   getCpuUsage(): number {
+    if (!this.lastCpuUsage) {
+      this.initializeCpuTracking();
+      return 0;
+    }
+
     const cpus = os.cpus();
     let totalIdle = 0;
     let totalTick = 0;
@@ -100,11 +129,23 @@ export class MetricsCollector {
       totalIdle += cpu.times.idle;
     });
 
-    const idle = totalIdle / cpus.length;
-    const total = totalTick / cpus.length;
-    const usage = 100 - (100 * idle / total);
-    
-    return Math.round(usage);
+    const idleDelta = totalIdle - this.lastCpuUsage.idle;
+    const totalDelta = totalTick - this.lastCpuUsage.total;
+
+    // Update last CPU usage
+    this.lastCpuUsage = {
+      idle: totalIdle,
+      total: totalTick,
+      timestamp: Date.now()
+    };
+
+    // Calculate usage percentage
+    if (totalDelta === 0) {
+      return 0;
+    }
+
+    const usage = 100 - (100 * idleDelta / totalDelta);
+    return Math.max(0, Math.min(100, Math.round(usage)));
   }
 
   /**

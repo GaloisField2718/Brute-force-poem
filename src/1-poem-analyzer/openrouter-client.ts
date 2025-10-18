@@ -56,7 +56,16 @@ export class OpenRouterClient {
         ]
       });
 
-      const content = response.data.choices[0].message.content;
+      // Validate response structure
+      if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+        throw new Error('Invalid response structure from OpenRouter API');
+      }
+
+      const content = response.data.choices[0]?.message?.content;
+      
+      if (!content) {
+        throw new Error('Empty response content from OpenRouter API');
+      }
       
       // Parse JSON response
       const scored = this.parseResponse(content);
