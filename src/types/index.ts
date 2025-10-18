@@ -81,7 +81,18 @@ export interface BalanceCheckResult {
   balance: number;
   apiUsed: string;
   timestamp: number;
-  error?: string;
+  error?: string | null;
+  checkDuration?: number;
+}
+
+export interface BitcoinSourceConfig {
+  sources: Array<{
+    type: 'api' | 'bitcoin-rpc' | 'electrum';
+    enabled: boolean;
+    priority: number;
+    config?: any;
+    comment?: string;
+  }>;
 }
 
 export interface SeedCheckTask {

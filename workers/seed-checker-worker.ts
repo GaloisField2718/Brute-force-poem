@@ -3,21 +3,51 @@
  */
 
 import { parentPort, workerData } from 'worker_threads';
+import * as fs from 'fs';
 import { AddressGenerator } from '../src/3-address-derivation/address-generator';
 import { ApiRouter } from '../src/4-balance-checker/api-router';
+import { UnifiedBalanceChecker } from '../src/4-balance-checker/unified-balance-checker';
 import { Config } from '../src/utils/config';
 import { SeedCheckTask, SeedCheckResult } from '../src/types';
 
-// Initialize API router with error handling
-let apiRouter: ApiRouter | null = null;
+// Initialize balance checker (API Router or Unified)
+let balanceChecker: ApiRouter | UnifiedBalanceChecker | null = null;
 
-try {
-  const apiConfig = Config.loadApiConfig();
-  apiRouter = new ApiRouter(apiConfig.endpoints);
-} catch (error) {
-  console.error('Failed to initialize worker API router:', error);
-  process.exit(1);
+async function initializeBalanceChecker() {
+  try {
+    // Check if bitcoin-sources.json exists and has RPC/Electrum enabled
+    const sourcesPath = Config.BITCOIN_SOURCES_PATH;
+    
+    if (fs.existsSync(sourcesPath)) {
+      const sourcesConfig = Config.loadBitcoinSources();
+      const hasAlternatives = sourcesConfig.sources.some((s: any) => 
+        s.enabled && (s.type === 'bitcoin-rpc' || s.type === 'electrum')
+      );
+      
+      if (hasAlternatives) {
+        console.log('Worker: Using Unified Balance Checker (with RPC/Electrum)');
+        const unified = new UnifiedBalanceChecker();
+        await unified.initialize();
+        balanceChecker = unified;
+        return;
+      }
+    }
+    
+    // Default: Use API Router with public APIs
+    console.log('Worker: Using API Router (public APIs)');
+    const apiConfig = Config.loadApiConfig();
+    balanceChecker = new ApiRouter(apiConfig.endpoints);
+  } catch (error) {
+    console.error('Failed to initialize worker balance checker:', error);
+    process.exit(1);
+  }
 }
+
+// Initialize on worker start
+initializeBalanceChecker().catch(error => {
+  console.error('Failed to initialize:', error);
+  process.exit(1);
+});
 
 /**
  * Check a single seed phrase
@@ -25,7 +55,7 @@ try {
 async function checkSeed(task: SeedCheckTask): Promise<SeedCheckResult> {
   const startTime = Date.now();
   
-  if (!apiRouter) {
+  if (!balanceChecker) {
     return {
       found: false,
       mnemonic: task.mnemonic,
@@ -50,7 +80,7 @@ async function checkSeed(task: SeedCheckTask): Promise<SeedCheckResult> {
     // Check balance for each address
     for (const addr of addresses) {
       try {
-        const balance = await apiRouter.checkBalance(addr.address);
+        const balance = await balanceChecker.checkBalance(addr.address);
         
         // Check if we found the target
         if (balance === Config.TARGET_BALANCE_SATS) {
