@@ -5,6 +5,8 @@
 
 import * as net from 'net';
 import * as tls from 'tls';
+import * as bitcoin from 'bitcoinjs-lib';
+import * as crypto from 'crypto';
 import { BalanceCheckResult } from '../types';
 import { logger } from '../utils/logger';
 
@@ -193,17 +195,28 @@ export class ElectrumClient {
   /**
    * Get script hash for an address
    * Bitcoin addresses need to be converted to script hash for Electrum
+   * Algorithm: address -> scriptPubKey -> SHA256 -> reverse bytes -> hex
    */
   private getScriptHash(address: string): string {
-    // This is a simplified version - you'd need to implement proper
-    // address-to-scripthash conversion using bitcoinjs-lib
-    // For now, we'll use a placeholder that should work with Electrum
-    const crypto = require('crypto');
-    
-    // Note: This is NOT the correct implementation
-    // You need to: address -> scriptPubKey -> SHA256 -> reverse bytes -> hex
-    // For production, use bitcoinjs-lib properly
-    return crypto.createHash('sha256').update(address).digest('hex');
+    try {
+      // Decode address to get output script (scriptPubKey)
+      const decoded = bitcoin.address.toOutputScript(address, bitcoin.networks.bitcoin);
+      
+      // Hash the script with SHA256
+      const hash = crypto.createHash('sha256').update(decoded).digest();
+      
+      // Reverse the bytes (Electrum uses reversed hash)
+      const reversed = Buffer.from(hash).reverse();
+      
+      // Return as hex string
+      return reversed.toString('hex');
+    } catch (error: any) {
+      logger.error('Failed to convert address to script hash', {
+        address,
+        error: error.message
+      });
+      throw new Error(`Invalid Bitcoin address: ${address}`);
+    }
   }
 
   /**

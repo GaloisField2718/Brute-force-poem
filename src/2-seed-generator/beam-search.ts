@@ -2,13 +2,14 @@
  * Beam search for generating optimal seed phrases
  */
 
-import { BeamSearchState, ScoredCandidate } from '../types';
+import { BeamSearchState, ScoredCandidate, PoemBlank } from '../types';
 import { ChecksumValidator } from './checksum-validator';
 import { logger } from '../utils/logger';
 
 export class BeamSearch {
   private beamWidth: number;
   private wordScoresPerPosition: Map<number, Map<string, number>> = new Map();
+  private position12Constraints: PoemBlank | null = null;
 
   constructor(beamWidth: number) {
     this.beamWidth = beamWidth;
@@ -28,6 +29,20 @@ export class BeamSearch {
       }
       
       this.wordScoresPerPosition.set(position, scoreMap);
+    }
+  }
+
+  /**
+   * Set constraints for position 12 (optional - for filtering last words)
+   */
+  setPosition12Constraints(blank: PoemBlank | null): void {
+    this.position12Constraints = blank;
+    if (blank) {
+      logger.info('Position 12 constraints enabled', {
+        length: blank.constraints.length,
+        syllables: blank.constraints.syllables,
+        semanticDomain: blank.constraints.semantic_domain
+      });
     }
   }
 
@@ -84,26 +99,36 @@ export class BeamSearch {
     // Now we have all 11-word prefixes in the beam
     // Find valid last words for each prefix
     const validSeeds: Array<{ seed: string; score: number }> = [];
+    const seenSeeds = new Set<string>();  // Track duplicates
 
     for (const state of beam) {
       if (state.partialSeed.length !== 11) {
         continue;
       }
 
-      const validLastWords = ChecksumValidator.findValidLastWords(state.partialSeed);
+      let validLastWords = ChecksumValidator.findValidLastWords(state.partialSeed);
+      
+      // Filter last words by position 12 poem constraints if available
+      if (this.position12Constraints) {
+        validLastWords = this.filterLastWordsByConstraints(validLastWords);
+      }
       
       for (const lastWord of validLastWords) {
         const lastWordScore = this.getWordScore(12, lastWord);
         const totalScore = (state.score * 11 + lastWordScore) / 12;
         const fullSeed = [...state.partialSeed, lastWord].join(' ');
         
-        validSeeds.push({
-          seed: fullSeed,
-          score: totalScore
-        });
+        // Only add if not already seen (CRITICAL: prevents duplicates)
+        if (!seenSeeds.has(fullSeed)) {
+          validSeeds.push({
+            seed: fullSeed,
+            score: totalScore
+          });
+          seenSeeds.add(fullSeed);
+        }
       }
 
-      // Stop if we have enough results
+      // Stop if we have enough unique results
       if (validSeeds.length >= maxResults) {
         break;
       }
@@ -114,8 +139,11 @@ export class BeamSearch {
     const results = validSeeds.slice(0, maxResults).map(item => item.seed);
 
     const duration = Date.now() - startTime;
+    const duplicatesSkipped = beam.length * 16 - seenSeeds.size;
     logger.info('Beam search complete', {
       totalSeeds: results.length,
+      uniqueSeeds: seenSeeds.size,
+      duplicatesSkipped: duplicatesSkipped > 0 ? duplicatesSkipped : 0,
       duration: `${duration}ms`,
       topScore: validSeeds[0]?.score.toFixed(4)
     });
@@ -161,6 +189,66 @@ export class BeamSearch {
   private getWordScore(position: number, word: string): number {
     const scoreMap = this.wordScoresPerPosition.get(position);
     return scoreMap?.get(word) || 0.01; // Default low score
+  }
+
+  /**
+   * Filter last words by position 12 poem constraints
+   */
+  private filterLastWordsByConstraints(words: string[]): string[] {
+    if (!this.position12Constraints) {
+      return words;
+    }
+
+    const constraints = this.position12Constraints.constraints;
+    const filtered: string[] = [];
+
+    // Load syllable counter synchronously (already loaded by this point)
+    const syllable = require('syllable').syllable;
+
+    for (const word of words) {
+      let matches = true;
+
+      // Check length (±1 tolerance)
+      const lengthDiff = Math.abs(word.length - constraints.length);
+      if (lengthDiff > 1) {
+        matches = false;
+      }
+
+      // Check syllables
+      if (matches && constraints.syllables > 0) {
+        const wordSyllables = syllable(word);
+        if (Math.abs(wordSyllables - constraints.syllables) > 1) {
+          matches = false;
+        }
+      }
+
+      // Check rhyme if specified
+      if (matches && constraints.rhyme_with) {
+        const rhymeWord = constraints.rhyme_with.toLowerCase();
+        const w = word.toLowerCase();
+        // Simple rhyme: last 2 characters match
+        if (w.length >= 2 && rhymeWord.length >= 2) {
+          if (w.slice(-2) !== rhymeWord.slice(-2)) {
+            matches = false;
+          }
+        }
+      }
+
+      if (matches) {
+        filtered.push(word);
+      }
+    }
+
+    if (filtered.length > 0 && filtered.length < words.length) {
+      logger.debug('Filtered position 12 words by constraints', {
+        original: words.length,
+        filtered: filtered.length,
+        examples: filtered.slice(0, 5)
+      });
+    }
+
+    // If too restrictive and filters out all words, return original list
+    return filtered.length > 0 ? filtered : words;
   }
 
   /**

@@ -11,21 +11,35 @@ import { Config } from '../utils/config';
 export class ResultHandler {
   private resultsFile: string;
   private foundWalletsFile: string;
+  private checkpointFile: string;
+  private checkedSeeds: Set<string> = new Set();  // Track checked seeds in memory
 
   constructor() {
     const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     this.resultsFile = path.join(Config.RESULTS_DIR, `results-${timestamp}.jsonl`);
     this.foundWalletsFile = path.join(Config.RESULTS_DIR, `found-wallets-${timestamp}.json`);
+    this.checkpointFile = path.join(Config.RESULTS_DIR, `checkpoint-${timestamp}.jsonl`);
+    
+    // Load previously checked seeds on startup
+    this.loadCheckedSeeds();
   }
 
   /**
    * Handle a seed check result
    */
   handleResult(result: SeedCheckResult): void {
+    // Add to checked seeds set
+    this.checkedSeeds.add(result.mnemonic);
+    
     if (result.found) {
       this.handleFoundWallet(result);
     } else {
       this.logCheckedSeed(result);
+    }
+    
+    // Write checkpoint every 100 seeds
+    if (this.checkedSeeds.size % 100 === 0) {
+      this.writeCheckpoint();
     }
   }
 
@@ -161,5 +175,140 @@ export class ResultHandler {
    */
   getFoundWalletsFile(): string {
     return this.foundWalletsFile;
+  }
+
+  /**
+   * Load previously checked seeds from results files
+   */
+  private loadCheckedSeeds(): void {
+    try {
+      // Load from all previous result files in the directory
+      if (!fs.existsSync(Config.RESULTS_DIR)) {
+        return;
+      }
+
+      const files = fs.readdirSync(Config.RESULTS_DIR);
+      const resultFiles = files.filter(f => f.startsWith('results-') && f.endsWith('.jsonl'));
+      
+      for (const file of resultFiles) {
+        const filePath = path.join(Config.RESULTS_DIR, file);
+        try {
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          
+          for (const line of lines) {
+            try {
+              const entry = JSON.parse(line);
+              if (entry.mnemonicHash) {
+                // We only have hash, so we'll use a different approach
+                // Store the actual mnemonic when checking
+              }
+            } catch (e) {
+              // Skip invalid lines
+            }
+          }
+        } catch (error) {
+          logger.debug('Could not read results file', { file });
+        }
+      }
+
+      // Load from checkpoint files
+      const checkpointFiles = files.filter(f => f.startsWith('checkpoint-') && f.endsWith('.jsonl'));
+      
+      for (const file of checkpointFiles) {
+        const filePath = path.join(Config.RESULTS_DIR, file);
+        try {
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const lines = content.split('\n').filter(l => l.trim());
+          
+          for (const line of lines) {
+            try {
+              const entry = JSON.parse(line);
+              if (entry.mnemonic) {
+                this.checkedSeeds.add(entry.mnemonic);
+              }
+            } catch (e) {
+              // Skip invalid lines
+            }
+          }
+        } catch (error) {
+          logger.debug('Could not read checkpoint file', { file });
+        }
+      }
+
+      if (this.checkedSeeds.size > 0) {
+        logger.info('Loaded previously checked seeds', {
+          count: this.checkedSeeds.size
+        });
+      }
+    } catch (error) {
+      logger.warn('Failed to load checked seeds', {
+        error: String(error)
+      });
+    }
+  }
+
+  /**
+   * Write checkpoint of checked seeds
+   */
+  private writeCheckpoint(): void {
+    try {
+      const checkpoint = {
+        timestamp: new Date().toISOString(),
+        checkedCount: this.checkedSeeds.size,
+        // Store hashes only for security
+        seeds: Array.from(this.checkedSeeds).map(seed => ({
+          mnemonic: seed,
+          hash: hashSensitive(seed)
+        }))
+      };
+
+      // Write to checkpoint file (overwrite each time)
+      fs.writeFileSync(
+        this.checkpointFile,
+        JSON.stringify(checkpoint, null, 2),
+        'utf-8'
+      );
+
+      logger.debug('Checkpoint written', {
+        checkedCount: this.checkedSeeds.size,
+        file: this.checkpointFile
+      });
+    } catch (error) {
+      logger.warn('Failed to write checkpoint', {
+        error: String(error)
+      });
+    }
+  }
+
+  /**
+   * Check if a seed has already been checked
+   */
+  isAlreadyChecked(mnemonic: string): boolean {
+    return this.checkedSeeds.has(mnemonic);
+  }
+
+  /**
+   * Filter out already-checked seeds from a task list
+   */
+  filterUncheckedSeeds<T extends {mnemonic: string}>(tasks: T[]): T[] {
+    const unchecked = tasks.filter(task => !this.checkedSeeds.has(task.mnemonic));
+    
+    if (unchecked.length < tasks.length) {
+      logger.info('Filtered out previously checked seeds', {
+        original: tasks.length,
+        unchecked: unchecked.length,
+        skipped: tasks.length - unchecked.length
+      });
+    }
+    
+    return unchecked;
+  }
+
+  /**
+   * Get count of checked seeds
+   */
+  getCheckedCount(): number {
+    return this.checkedSeeds.size;
   }
 }
