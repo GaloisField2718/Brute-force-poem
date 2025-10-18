@@ -11,6 +11,10 @@ dist/
 logs/
 *.log
 
+# Results (sensitive wallet data)
+results/
+found-wallets.json
+
 # OS files
 .DS_Store
 Thumbs.db

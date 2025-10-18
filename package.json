@@ -7,6 +7,7 @@
     "build": "tsc && tsc workers/seed-checker-worker.ts --outDir dist/workers --module commonjs --target ES2022 --esModuleInterop --skipLibCheck --resolveJsonModule",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
+    "verify": "ts-node scripts/verify-setup.ts",
     "test": "jest",
     "test:derivation": "ts-node scripts/test-derivation.ts",
     "test:bip39": "ts-node scripts/test-bip39.ts",
