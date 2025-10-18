@@ -22,7 +22,7 @@ export class Config {
   // Performance
   static readonly WORKER_COUNT = parseInt(process.env.WORKER_COUNT || '8', 10);
   static readonly BEAM_WIDTH = parseInt(process.env.BEAM_WIDTH || '200', 10);
-  static readonly TOP_K_PER_POSITION = parseInt(process.env.TOP_K_PER_POSITION || '15', 10);
+  static readonly TOP_K_PER_POSITION = parseInt(process.env.TOP_K_PER_POSITION || '3', 10);
   static readonly MAX_SEEDS_TO_CHECK = parseInt(process.env.MAX_SEEDS_TO_CHECK || '10000', 10);
 
   // API Configuration

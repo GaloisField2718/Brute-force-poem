@@ -122,7 +122,7 @@ ${candidateWords.join(', ')}
    - Semantic appropriateness
    - Rhyme and rhythm
    - Constraint satisfaction
-2. Return the top 15 words ranked by probability
+2. Return the top 3 words ranked by probability
 3. Provide a brief reason for each word's score
 
 **Response Format (JSON only, no markdown):**
