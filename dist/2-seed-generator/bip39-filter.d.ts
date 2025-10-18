@@ -15,7 +15,7 @@ export declare class BIP39Filter {
     /**
      * Filter BIP39 words based on constraints
      */
-    static filterWords(blank: PoemBlank, tolerance?: number): FilteredWord[];
+    static filterWords(blank: PoemBlank, tolerance?: number): Promise<FilteredWord[]>;
     /**
      * Check if two words rhyme (same ending sounds)
      */

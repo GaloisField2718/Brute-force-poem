@@ -3,9 +3,19 @@
  */
 
 import * as bip39 from 'bip39';
-import { syllable } from 'syllable';
 import { PoemBlank } from '../types';
 import { logger } from '../utils/logger';
+
+// Dynamic import for ES Module
+let syllableFunction: ((text: string) => number) | null = null;
+
+async function loadSyllable(): Promise<(text: string) => number> {
+  if (!syllableFunction) {
+    const syllableModule = await import('syllable');
+    syllableFunction = syllableModule.syllable;
+  }
+  return syllableFunction;
+}
 
 export interface FilteredWord {
   word: string;
@@ -25,7 +35,7 @@ export class BIP39Filter {
   /**
    * Filter BIP39 words based on constraints
    */
-  static filterWords(blank: PoemBlank, tolerance: number = 1): FilteredWord[] {
+  static async filterWords(blank: PoemBlank, tolerance: number = 1): Promise<FilteredWord[]> {
     if (!blank || !blank.constraints) {
       throw new Error('Invalid blank: missing constraints');
     }
@@ -40,6 +50,7 @@ export class BIP39Filter {
 
     const constraints = blank.constraints;
     const filtered: FilteredWord[] = [];
+    const syllable = await loadSyllable();
 
     for (const word of this.wordlist) {
       let matchScore = 0;

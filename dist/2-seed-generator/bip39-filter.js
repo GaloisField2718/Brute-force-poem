@@ -38,8 +38,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BIP39Filter = void 0;
 const bip39 = __importStar(require("bip39"));
-const syllable_1 = require("syllable");
 const logger_1 = require("../utils/logger");
+// Dynamic import for ES Module
+let syllableFunction = null;
+async function loadSyllable() {
+    if (!syllableFunction) {
+        const syllableModule = await Promise.resolve().then(() => __importStar(require('syllable')));
+        syllableFunction = syllableModule.syllable;
+    }
+    return syllableFunction;
+}
 class BIP39Filter {
     static wordlist = bip39.wordlists.english;
     /**
@@ -51,7 +59,7 @@ class BIP39Filter {
     /**
      * Filter BIP39 words based on constraints
      */
-    static filterWords(blank, tolerance = 1) {
+    static async filterWords(blank, tolerance = 1) {
         if (!blank || !blank.constraints) {
             throw new Error('Invalid blank: missing constraints');
         }
@@ -63,6 +71,7 @@ class BIP39Filter {
         }
         const constraints = blank.constraints;
         const filtered = [];
+        const syllable = await loadSyllable();
         for (const word of this.wordlist) {
             let matchScore = 0;
             let maxScore = 0;
@@ -80,7 +89,7 @@ class BIP39Filter {
             }
             // Syllable constraint
             maxScore += 2;
-            const syllables = (0, syllable_1.syllable)(word);
+            const syllables = syllable(word);
             if (syllables === constraints.syllables) {
                 matchScore += 2;
             }
