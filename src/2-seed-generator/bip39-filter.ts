@@ -6,15 +6,17 @@ import * as bip39 from 'bip39';
 import { PoemBlank } from '../types';
 import { logger } from '../utils/logger';
 
-// Dynamic import for ES Module
+// Dynamic import for ES Module - use Function constructor to prevent TS from transforming it
 let syllableFunction: ((text: string) => number) | null = null;
 
 async function loadSyllable(): Promise<(text: string) => number> {
   if (!syllableFunction) {
-    const syllableModule = await import('syllable');
+    // Use Function constructor to create a real dynamic import that TS won't transform
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+    const syllableModule = await dynamicImport('syllable');
     syllableFunction = syllableModule.syllable;
   }
-  return syllableFunction;
+  return syllableFunction!; // Non-null assertion since we just set it above
 }
 
 export interface FilteredWord {
