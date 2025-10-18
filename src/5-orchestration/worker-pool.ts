@@ -20,7 +20,7 @@ export class WorkerPool {
 
   constructor(
     private workerCount: number = Config.WORKER_COUNT,
-    private workerScript: string = path.join(__dirname, '../../workers/seed-checker-worker.js')
+    private workerScript: string = path.join(__dirname, '../workers/workers/seed-checker-worker.js')
   ) {}
 
   /**
