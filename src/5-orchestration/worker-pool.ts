@@ -20,7 +20,7 @@ export class WorkerPool {
 
   constructor(
     private workerCount: number = Config.WORKER_COUNT,
-    private workerScript: string = path.join(__dirname, '../../../workers/seed-checker-worker.js')
+    private workerScript: string = path.join(__dirname, '../../workers/seed-checker-worker.js')
   ) {}
 
   /**
@@ -75,6 +75,7 @@ export class WorkerPool {
    */
   submitTask(task: SeedCheckTask): void {
     if (this.isShuttingDown) {
+      logger.debug('Rejecting task - pool is shutting down');
       return;
     }
 
@@ -87,6 +88,7 @@ export class WorkerPool {
    */
   submitTasks(tasks: SeedCheckTask[]): void {
     if (this.isShuttingDown) {
+      logger.debug('Rejecting tasks - pool is shutting down');
       return;
     }
 
@@ -95,15 +97,35 @@ export class WorkerPool {
   }
 
   /**
-   * Process task queue
+   * Process task queue (thread-safe)
    */
   private processQueue(): void {
-    while (this.availableWorkers.length > 0 && this.taskQueue.length > 0) {
+    // Check shutdown flag before processing
+    if (this.isShuttingDown) {
+      return;
+    }
+
+    while (this.availableWorkers.length > 0 && this.taskQueue.length > 0 && !this.isShuttingDown) {
       const worker = this.availableWorkers.shift();
       const task = this.taskQueue.shift();
 
-      if (worker && task) {
-        worker.postMessage(task);
+      if (worker && task && !this.isShuttingDown) {
+        try {
+          worker.postMessage(task);
+        } catch (error) {
+          logger.error('Failed to send task to worker', {
+            error: String(error),
+            workerId: worker.threadId
+          });
+          // Return worker to available pool
+          this.availableWorkers.push(worker);
+          // Return task to queue
+          this.taskQueue.unshift(task);
+        }
+      } else if (task) {
+        // If no worker but we have a task, put it back
+        this.taskQueue.unshift(task);
+        break;
       }
     }
   }

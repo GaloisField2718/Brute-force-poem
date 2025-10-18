@@ -38,6 +38,22 @@ export class BeamSearch {
     candidatesPerPosition: Map<number, string[]>,
     maxResults: number = 10000
   ): string[] {
+    if (maxResults <= 0) {
+      throw new Error('maxResults must be positive');
+    }
+
+    if (this.beamWidth <= 0) {
+      throw new Error('beamWidth must be positive');
+    }
+
+    // Validate we have candidates for positions 1-11
+    for (let pos = 1; pos <= 11; pos++) {
+      const candidates = candidatesPerPosition.get(pos);
+      if (!candidates || candidates.length === 0) {
+        throw new Error(`No candidates for position ${pos}. Cannot perform beam search.`);
+      }
+    }
+
     const startTime = Date.now();
     
     // Initialize beam with empty state

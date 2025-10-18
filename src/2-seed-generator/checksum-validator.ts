@@ -3,6 +3,7 @@
  */
 
 import * as bip39 from 'bip39';
+import * as crypto from 'crypto';
 import { logger } from '../utils/logger';
 
 export class ChecksumValidator {
@@ -86,7 +87,9 @@ export class ChecksumValidator {
    * Calculate checksum for entropy (for reference)
    */
   static calculateChecksum(entropy: Buffer): Buffer {
-    const crypto = require('crypto');
+    if (!entropy || entropy.length === 0) {
+      throw new Error('Invalid entropy: must be non-empty Buffer');
+    }
     const hash = crypto.createHash('sha256').update(entropy).digest();
     return hash;
   }
