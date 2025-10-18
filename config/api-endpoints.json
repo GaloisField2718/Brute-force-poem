@@ -1,0 +1,64 @@
+{
+  "endpoints": [
+    {
+      "name": "mempool-space",
+      "baseUrl": "https://mempool.space/api",
+      "rateLimit": {
+        "requestsPerSecond": 10,
+        "requestsPerMinute": 300,
+        "requestsPerHour": 10000
+      },
+      "priority": 1,
+      "timeout": 8000,
+      "retryStrategy": {
+        "maxRetries": 3,
+        "backoffMs": [1000, 2000, 5000]
+      }
+    },
+    {
+      "name": "blockstream",
+      "baseUrl": "https://blockstream.info/api",
+      "rateLimit": {
+        "requestsPerSecond": 5,
+        "requestsPerMinute": 200,
+        "requestsPerHour": 8000
+      },
+      "priority": 2,
+      "timeout": 10000,
+      "retryStrategy": {
+        "maxRetries": 3,
+        "backoffMs": [1500, 3000, 6000]
+      }
+    },
+    {
+      "name": "blockchain-info",
+      "baseUrl": "https://blockchain.info",
+      "rateLimit": {
+        "requestsPerSecond": 3,
+        "requestsPerMinute": 100,
+        "requestsPerHour": 5000
+      },
+      "priority": 3,
+      "timeout": 12000,
+      "retryStrategy": {
+        "maxRetries": 3,
+        "backoffMs": [2000, 4000, 8000]
+      }
+    },
+    {
+      "name": "blockcypher",
+      "baseUrl": "https://api.blockcypher.com/v1/btc/main",
+      "rateLimit": {
+        "requestsPerSecond": 3,
+        "requestsPerMinute": 100,
+        "requestsPerHour": 5000
+      },
+      "priority": 4,
+      "timeout": 10000,
+      "retryStrategy": {
+        "maxRetries": 3,
+        "backoffMs": [2000, 4000, 8000]
+      }
+    }
+  ]
+}

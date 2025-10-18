@@ -1,0 +1,136 @@
+{
+  "poem": "In freedom of thought, I dream beyond _____'s wall,\nLosing through loss yet learning what ____s call.\nTo sell a moment, then ______ it from time,\nAn empty heart echoes — a ______ without rhyme.\nI've had insufficient hope of ______ to be still,\nOnce released from the current, now _____ by will.\nThe soothe becomes ____ in the rush of the night,\nThe individual drifts into the ______'s soft light.\nFrom work to ____, from misleading to ______,\nA salad becomes _____ — both fortune and fate.\nAnd life, like warm soup or sweet _____ at ease,\nIs richest when tasted uncertain — to please.",
+  "target_balance": 100000,
+  "blanks": [
+    {
+      "position": 1,
+      "context": "In freedom of thought, I dream beyond _____'s wall",
+      "constraints": {
+        "length": 5,
+        "pattern": "possessive_noun",
+        "syllables": 1,
+        "rhyme_with": "wall",
+        "semantic_domain": ["prison", "border", "limit", "structure"]
+      }
+    },
+    {
+      "position": 2,
+      "context": "Losing through loss yet learning what ____s call",
+      "constraints": {
+        "length": 4,
+        "pattern": "plural_noun",
+        "syllables": 1,
+        "rhyme_with": "call",
+        "semantic_domain": ["people", "group", "entity"]
+      }
+    },
+    {
+      "position": 3,
+      "context": "To sell a moment, then ______ it from time",
+      "constraints": {
+        "length": 6,
+        "pattern": "transitive_verb",
+        "syllables": 2,
+        "rhyme_with": "time",
+        "semantic_domain": ["acquire", "take", "remove", "extract"]
+      }
+    },
+    {
+      "position": 4,
+      "context": "An empty heart echoes — a ______ without rhyme",
+      "constraints": {
+        "length": 6,
+        "pattern": "noun",
+        "syllables": 2,
+        "rhyme_with": "rhyme",
+        "semantic_domain": ["poetry", "sound", "expression"]
+      }
+    },
+    {
+      "position": 5,
+      "context": "I've had insufficient hope of ______ to be still",
+      "constraints": {
+        "length": 6,
+        "pattern": "abstract_noun",
+        "syllables": 2,
+        "rhyme_with": "still",
+        "semantic_domain": ["state", "condition", "quality"]
+      }
+    },
+    {
+      "position": 6,
+      "context": "Once released from the current, now _____ by will",
+      "constraints": {
+        "length": 5,
+        "pattern": "past_participle",
+        "syllables": 1,
+        "rhyme_with": "will",
+        "semantic_domain": ["guided", "moved", "controlled"]
+      }
+    },
+    {
+      "position": 7,
+      "context": "The soothe becomes ____ in the rush of the night",
+      "constraints": {
+        "length": 4,
+        "pattern": "adjective",
+        "syllables": 1,
+        "rhyme_with": "night",
+        "semantic_domain": ["quality", "state", "emotion"]
+      }
+    },
+    {
+      "position": 8,
+      "context": "The individual drifts into the ______'s soft light",
+      "constraints": {
+        "length": 6,
+        "pattern": "possessive_noun",
+        "syllables": 2,
+        "rhyme_with": "light",
+        "semantic_domain": ["celestial", "group", "collective"]
+      }
+    },
+    {
+      "position": 9,
+      "context": "From work to ____, from misleading to ______",
+      "constraints": {
+        "length": 4,
+        "pattern": "noun",
+        "syllables": 1,
+        "semantic_domain": ["activity", "state", "opposite_of_work"]
+      }
+    },
+    {
+      "position": 10,
+      "context": "from misleading to ______,",
+      "constraints": {
+        "length": 6,
+        "pattern": "adjective_or_verb",
+        "syllables": 2,
+        "semantic_domain": ["truth", "clarity", "honesty"]
+      }
+    },
+    {
+      "position": 11,
+      "context": "A salad becomes _____ — both fortune and fate",
+      "constraints": {
+        "length": 5,
+        "pattern": "adjective_or_noun",
+        "syllables": 2,
+        "rhyme_with": "fate",
+        "semantic_domain": ["transformation", "value"]
+      }
+    },
+    {
+      "position": 12,
+      "context": "And life, like warm soup or sweet _____ at ease",
+      "constraints": {
+        "length": 5,
+        "pattern": "noun",
+        "syllables": 2,
+        "rhyme_with": "ease",
+        "semantic_domain": ["dessert", "comfort", "sweetness"]
+      }
+    }
+  ]
+}
