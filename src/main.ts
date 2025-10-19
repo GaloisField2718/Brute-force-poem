@@ -117,7 +117,7 @@ class SeedRecoveryOrchestrator {
         maxSeeds: Config.MAX_SEEDS_TO_CHECK
       });
 
-      const candidateSeeds = beamSearch.search(
+      const candidateSeeds = await beamSearch.search(
         candidatesPerPosition,
         Config.MAX_SEEDS_TO_CHECK
       );

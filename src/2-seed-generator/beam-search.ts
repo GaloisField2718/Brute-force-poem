@@ -49,10 +49,10 @@ export class BeamSearch {
   /**
    * Run beam search to generate top-k seed phrases
    */
-  search(
+  async search(
     candidatesPerPosition: Map<number, string[]>,
     maxResults: number = 10000
-  ): string[] {
+  ): Promise<string[]> {
     if (maxResults <= 0) {
       throw new Error('maxResults must be positive');
     }
@@ -110,7 +110,7 @@ export class BeamSearch {
       
       // Filter last words by position 12 poem constraints if available
       if (this.position12Constraints) {
-        validLastWords = this.filterLastWordsByConstraints(validLastWords);
+        validLastWords = await this.filterLastWordsByConstraints(validLastWords);
       }
       
       for (const lastWord of validLastWords) {
@@ -194,7 +194,7 @@ export class BeamSearch {
   /**
    * Filter last words by position 12 poem constraints
    */
-  private filterLastWordsByConstraints(words: string[]): string[] {
+  private async filterLastWordsByConstraints(words: string[]): Promise<string[]> {
     if (!this.position12Constraints) {
       return words;
     }
@@ -202,8 +202,8 @@ export class BeamSearch {
     const constraints = this.position12Constraints.constraints;
     const filtered: string[] = [];
 
-    // Load syllable counter synchronously (already loaded by this point)
-    const syllable = require('syllable').syllable;
+    // Load syllable counter using dynamic import (ES Module)
+    const { syllable } = await import('syllable');
 
     for (const word of words) {
       let matches = true;
