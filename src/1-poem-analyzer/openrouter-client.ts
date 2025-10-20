@@ -42,7 +42,7 @@ export class OpenRouterClient {
     try {
       const response = await this.client.post('/chat/completions', {
         model: Config.OPENROUTER_MODEL,
-        temperature: 0.2,
+        temperature: 0.7, // INCREASED for more variability
         max_tokens: 1000,
         messages: [
           {
@@ -99,9 +99,37 @@ export class OpenRouterClient {
   private buildPrompt(blank: PoemBlank, candidateWords: string[]): string {
     const { context, constraints } = blank;
 
-    return `Analyze this poetic context and rank the following BIP39 words by how well they fit.
+    return `You are a poetry expert analyzing a Bitcoin seed phrase hidden in a poem. The poem tells a story of liberation from prison.
 
-**Poetic Context:**
+**COMPLETE POEM CONTEXT:**
+"In freedom of thought, I dream beyond _____'s wall,
+Losing through loss yet learning what ____s call.
+To sell a moment, then ______ it from time,
+An empty heart echoes — a ______ without rhyme.
+I've had insufficient hope of ______ to be still,
+Once released from the current, now _____ by will.
+The soothe becomes ____ in the rush of the night,
+The individual drifts into the ______'s soft light.
+From work to ____, from misleading to ______,
+A salad becomes _____ — both fortune and fate.
+And life, like warm soup or sweet _____ at ease,
+Is richest when tasted uncertain — to please."
+
+**STORY ANALYSIS:**
+- Line 1: "dream beyond _____'s wall" → PRISON (obvious!)
+- Line 2: "what ____s call" → PROFIT (financial gain!)
+- Line 3: "then ______ it from time" → PURCHASE (buy/acquire!)
+- Line 4: "a ______ without rhyme" → POETRY (poetic expression!)
+- Line 5: "hope of ______ to be still" → PEACE (tranquility!)
+- Line 6: "now _____ by will" → GUIDED (controlled!)
+- Line 7: "becomes ____ in the night" → DARK (darkness!)
+- Line 8: "the ______'s soft light" → CELESTIAL (heavenly!)
+- Line 9: "From work to ____" → REST (leisure!)
+- Line 10: "from misleading to ______" → TRUTH (honesty!)
+- Line 11: "becomes _____ — both fortune and fate" → VALUABLE (precious!)
+- Line 12: "sweet _____ at ease" → FOOD (comfort!)
+
+**Current Position Context:**
 "${context}"
 
 **Blank Position:** ${blank.position}
@@ -116,20 +144,37 @@ ${constraints.rhyme_with ? `- Rhymes with: "${constraints.rhyme_with}"` : ''}
 **BIP39 Candidate Words:**
 ${candidateWords.join(', ')}
 
-**Instructions:**
-1. Evaluate each word based on:
-   - Poetic fit and natural flow
-   - Semantic appropriateness
-   - Rhyme and rhythm
-   - Constraint satisfaction
-2. Return the top 3 words ranked by probability
-3. Provide a brief reason for each word's score
+**CRITICAL INSTRUCTIONS:**
+1. The poem is about ESCAPING PRISON - think "prison", "profit", "purchase", "poetry", "peace", "guided", "dark", "celestial", "rest", "truth", "valuable", "food"
+2. Look for words that fit the STORY, not just technical constraints
+3. Consider the NARRATIVE FLOW from prison → liberation → transformation
+4. Prioritize SEMANTIC MEANING over technical matching
+5. Return the top 5 words ranked by story fit
+
+**EXPECTED SEED PHRASE PATTERN (EXAMPLES ONLY):**
+The Bitcoin seed phrase likely follows this semantic pattern (these are EXAMPLES, not the actual words):
+- Position 1: "prison" (dream beyond prison's wall) - EXAMPLE of prison-related word
+- Position 2: "profit" (what profit calls) - EXAMPLE of financial gain word
+- Position 3: "purchase" (then purchase it from time) - EXAMPLE of acquisition word
+- Position 4: "poetry" (without rhyme) - EXAMPLE of poetic expression word
+- Position 5: "peace" (hope of peace to be still) - EXAMPLE of tranquility word
+- Position 6: "guided" (now guided by will) - EXAMPLE of controlled word
+- Position 7: "dark" (becomes dark in the night) - EXAMPLE of darkness word
+- Position 8: "celestial" (the celestial's soft light) - EXAMPLE of heavenly word
+- Position 9: "rest" (from work to rest) - EXAMPLE of leisure word
+- Position 10: "truth" (from misleading to truth) - EXAMPLE of honesty word
+- Position 11: "valuable" (becomes valuable) - EXAMPLE of precious word
+- Position 12: "food" (sweet food at ease) - EXAMPLE of comfort word
+
+**IMPORTANT:** These are SEMANTIC EXAMPLES to guide your analysis. You must find the actual BIP39 words that match these meanings from the candidate list provided.
 
 **Response Format (JSON only, no markdown):**
 [
-  {"word": "example", "score": 0.95, "reason": "Perfect semantic and rhythmic fit"},
-  {"word": "another", "score": 0.87, "reason": "Good fit but slightly less natural"},
-  ...
+  {"word": "actual_bip39_word", "score": 0.95, "reason": "Perfect semantic fit for prison theme"},
+  {"word": "actual_bip39_word", "score": 0.90, "reason": "Good semantic fit for financial gain theme"},
+  {"word": "actual_bip39_word", "score": 0.85, "reason": "Good semantic fit for acquisition theme"},
+  {"word": "actual_bip39_word", "score": 0.80, "reason": "Good semantic fit for poetic expression theme"},
+  {"word": "actual_bip39_word", "score": 0.75, "reason": "Good semantic fit for tranquility theme"}
 ]
 
 Return ONLY the JSON array, nothing else.`;

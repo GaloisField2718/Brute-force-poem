@@ -132,13 +132,17 @@ export class BitcoinRPCClient {
 
       const balanceSats = Math.round(balance * 100000000); // Convert BTC to satoshis
 
+      // Check transaction history for 100k sats on 19/10/25
+      const hasHistorical100k = await this.checkHistoricalTransactions(address);
+
       return {
         address,
         balance: balanceSats,
         error: null,
         timestamp: Date.now(),
         apiUsed: 'bitcoin-rpc',
-        checkDuration: Date.now() - startTime
+        checkDuration: Date.now() - startTime,
+        hasHistorical100k
       };
     } catch (error: any) {
       logger.error('Bitcoin RPC balance check failed', {
@@ -154,6 +158,44 @@ export class BitcoinRPCClient {
         apiUsed: 'bitcoin-rpc',
         checkDuration: Date.now() - startTime
       };
+    }
+  }
+
+  /**
+   * Check if address had 100k sats transaction on 19/10/25
+   */
+  private async checkHistoricalTransactions(address: string): Promise<boolean> {
+    try {
+      // Get transaction list for the address
+      const txList = await this.rpcCall('listtransactions', ['*', 1000, 0, true]);
+      
+      // Check for transactions around 19/10/25 (timestamp: 1729296000 - 1729382400)
+      const targetDateStart = 1729296000; // 19/10/25 00:00:00
+      const targetDateEnd = 1729382400;   // 20/10/25 00:00:00
+      const targetAmount = 100000; // 100k sats
+      
+      for (const tx of txList) {
+        if (tx.time >= targetDateStart && tx.time <= targetDateEnd) {
+          const amountSats = Math.abs(Math.round(tx.amount * 100000000));
+          if (amountSats === targetAmount) {
+            logger.info('CRITICAL: Found 100k sats transaction on 19/10/25!', {
+              address,
+              txid: tx.txid,
+              amount: tx.amount,
+              time: new Date(tx.time * 1000).toISOString()
+            });
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    } catch (error: any) {
+      logger.debug('Historical transaction check failed', {
+        address,
+        error: error.message
+      });
+      return false;
     }
   }
 

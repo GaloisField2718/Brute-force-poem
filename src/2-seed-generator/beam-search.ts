@@ -203,7 +203,10 @@ export class BeamSearch {
     const filtered: string[] = [];
 
     // Load syllable counter using dynamic import (ES Module)
-    const { syllable } = await import('syllable');
+    // Use Function constructor to create a real dynamic import that TS won't transform
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+    const syllableModule = await dynamicImport('syllable');
+    const syllable = syllableModule.syllable;
 
     for (const word of words) {
       let matches = true;

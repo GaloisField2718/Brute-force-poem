@@ -28,8 +28,9 @@ export class ResultHandler {
    * Handle a seed check result
    */
   handleResult(result: SeedCheckResult): void {
-    // Add to checked seeds set
-    this.checkedSeeds.add(result.mnemonic);
+    // Add hash to checked seeds set (for deduplication)
+    const mnemonicHash = hashSensitive(result.mnemonic);
+    this.checkedSeeds.add(mnemonicHash);
     
     if (result.found) {
       this.handleFoundWallet(result);
@@ -190,8 +191,12 @@ export class ResultHandler {
       const files = fs.readdirSync(Config.RESULTS_DIR);
       const resultFiles = files.filter(f => f.startsWith('results-') && f.endsWith('.jsonl'));
       
-      for (const file of resultFiles) {
-        const filePath = path.join(Config.RESULTS_DIR, file);
+      // CRITICAL FIX: Only load the most recent results file to avoid filtering too many seeds
+      const sortedFiles = resultFiles.sort().reverse();
+      const recentFile = sortedFiles[0]; // Most recent file only
+      
+      if (recentFile) {
+        const filePath = path.join(Config.RESULTS_DIR, recentFile);
         try {
           const content = fs.readFileSync(filePath, 'utf-8');
           const lines = content.split('\n').filter(l => l.trim());
@@ -200,15 +205,15 @@ export class ResultHandler {
             try {
               const entry = JSON.parse(line);
               if (entry.mnemonicHash) {
-                // We only have hash, so we'll use a different approach
-                // Store the actual mnemonic when checking
+                // Store the hash to avoid re-checking same seeds
+                this.checkedSeeds.add(entry.mnemonicHash);
               }
             } catch (e) {
               // Skip invalid lines
             }
           }
         } catch (error) {
-          logger.debug('Could not read results file', { file });
+          logger.debug('Could not read results file', { file: recentFile });
         }
       }
 
@@ -292,7 +297,11 @@ export class ResultHandler {
    * Filter out already-checked seeds from a task list
    */
   filterUncheckedSeeds<T extends {mnemonic: string}>(tasks: T[]): T[] {
-    const unchecked = tasks.filter(task => !this.checkedSeeds.has(task.mnemonic));
+    const unchecked = tasks.filter(task => {
+      // Hash the mnemonic to check against stored hashes
+      const mnemonicHash = hashSensitive(task.mnemonic);
+      return !this.checkedSeeds.has(mnemonicHash);
+    });
     
     if (unchecked.length < tasks.length) {
       logger.info('Filtered out previously checked seeds', {

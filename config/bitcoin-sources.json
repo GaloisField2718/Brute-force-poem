@@ -19,12 +19,12 @@
       "enabled": true,
       "priority": 2,
       "config": {
-        "host": "electrum.blockstream.info",
-        "port": 50002,
-        "protocol": "ssl",
+        "host": "127.0.0.1",
+        "port": 50001,
+        "protocol": "tcp",
         "timeout": 10000
       },
-      "comment": "Electrum server - Fallback if Bitcoin RPC fails"
+      "comment": "Electrum server local - Fallback if Bitcoin RPC fails"
     },
     {
       "type": "api",

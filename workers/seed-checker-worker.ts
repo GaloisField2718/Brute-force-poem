@@ -70,8 +70,12 @@ async function checkSeed(task: SeedCheckTask): Promise<SeedCheckResult> {
       throw new Error('Invalid mnemonic: must be 12 words');
     }
 
+    console.log('Worker: Starting address derivation for seed:', task.mnemonic.substring(0, 20) + '...');
+    
     // Derive all 12 addresses
     const addresses = AddressGenerator.deriveAllAddresses(task.mnemonic);
+    
+    console.log('Worker: Generated', addresses.length, 'addresses');
     
     if (!addresses || addresses.length === 0) {
       throw new Error('Failed to derive addresses');
@@ -82,7 +86,7 @@ async function checkSeed(task: SeedCheckTask): Promise<SeedCheckResult> {
       try {
         const balance = await balanceChecker.checkBalance(addr.address);
         
-        // Check if we found the target
+        // Check if we found the target (current balance)
         if (balance === Config.TARGET_BALANCE_SATS) {
           const checkDuration = Date.now() - startTime;
           
@@ -97,6 +101,11 @@ async function checkSeed(task: SeedCheckTask): Promise<SeedCheckResult> {
             checkDuration
           };
         }
+        
+        // CRITICAL: Check for historical 100k sats transaction on 19/10/25
+        // Note: This requires modifying the balance checker to return the full result object
+        // For now, we'll rely on the logging in the balance checker
+        
       } catch (apiError) {
         // Log API error but continue checking other addresses
         console.error(`API error for address ${addr.address}:`, apiError);

@@ -235,13 +235,17 @@ export class ElectrumClient {
       // Balance returns { confirmed, unconfirmed }
       const totalBalance = (balance.confirmed || 0) + (balance.unconfirmed || 0);
 
+      // CRITICAL: Check transaction history for 100k sats on 19/10/25
+      const hasHistorical100k = await this.checkHistoricalTransactions(scriptHash);
+
       return {
         address,
         balance: totalBalance,
         error: null,
         timestamp: Date.now(),
         apiUsed: 'electrum',
-        checkDuration: Date.now() - startTime
+        checkDuration: Date.now() - startTime,
+        hasHistorical100k // Add this flag
       };
     } catch (error: any) {
       logger.error('Electrum balance check failed', {
@@ -257,6 +261,80 @@ export class ElectrumClient {
         apiUsed: 'electrum',
         checkDuration: Date.now() - startTime
       };
+    }
+  }
+
+  /**
+   * Check if address had 100k sats transaction on 19/10/25 using Electrum
+   */
+  private async checkHistoricalTransactions(scriptHash: string): Promise<boolean> {
+    try {
+      // Get transaction history from Electrum
+      const history = await this.request('blockchain.scripthash.get_history', [scriptHash]);
+      
+      // Check for transactions around 19/10/25 (timestamp: 1729296000 - 1729382400)
+      const targetDateStart = 1729296000; // 19/10/25 00:00:00
+      const targetDateEnd = 1729382400;   // 20/10/25 00:00:00
+      const targetAmount = 100000; // 100k sats
+      
+      for (const tx of history) {
+        if (tx.height > 0) { // Only confirmed transactions
+          // Get transaction details
+          const txDetails = await this.request('blockchain.transaction.get', [tx.tx_hash, true]);
+          
+          // Check if this transaction has 100k sats input/output
+          if (this.has100kSatsInTransaction(txDetails, targetAmount)) {
+            // Check if transaction is within target date range (19/10/25)
+            const txTime = txDetails.time || 0;
+            if (txTime >= targetDateStart && txTime <= targetDateEnd) {
+              logger.info('CRITICAL: Found 100k sats transaction on 19/10/25 via Electrum!', {
+                txHash: tx.tx_hash,
+                height: tx.height,
+                amount: targetAmount,
+                time: new Date(txTime * 1000).toISOString()
+              });
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    } catch (error: any) {
+      logger.debug('Electrum historical transaction check failed', {
+        scriptHash,
+        error: error.message
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Check if transaction contains 100k sats
+   */
+  private has100kSatsInTransaction(txDetails: any, targetAmount: number): boolean {
+    try {
+      // Check outputs for 100k sats
+      if (txDetails.vout) {
+        for (const output of txDetails.vout) {
+          if (output.value === targetAmount) {
+            return true;
+          }
+        }
+      }
+      
+      // Check inputs for 100k sats (if we can access them)
+      if (txDetails.vin) {
+        for (const input of txDetails.vin) {
+          if (input.prevout && input.prevout.value === targetAmount) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      return false;
     }
   }
 

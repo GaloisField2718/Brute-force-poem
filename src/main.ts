@@ -87,9 +87,9 @@ class SeedRecoveryOrchestrator {
         candidatesPerPosition
       );
 
-      // Update candidates with scored words (top 3 from LLM)
+      // Update candidates with scored words (top 5 from LLM for more variety)
       for (const [position, scored] of scoredCandidates.entries()) {
-        const topScored = scored.slice(0, 3).map(s => s.word);
+        const topScored = scored.slice(0, 5).map(s => s.word); // INCREASED from 3 to 5
         candidatesPerPosition.set(position, topScored);
         
         logger.info(`Position ${position}: LLM scored`, {

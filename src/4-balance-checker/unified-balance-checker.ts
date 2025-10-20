@@ -111,6 +111,7 @@ export class UnifiedBalanceChecker {
         });
 
         let balance = 0;
+        let hasHistorical100k = false;
 
         switch (source.type) {
           case 'api':
@@ -123,6 +124,7 @@ export class UnifiedBalanceChecker {
               throw new Error(rpcResult.error);
             }
             balance = rpcResult.balance;
+            hasHistorical100k = rpcResult.hasHistorical100k || false;
             break;
 
           case 'electrum':
@@ -131,7 +133,17 @@ export class UnifiedBalanceChecker {
               throw new Error(electrumResult.error);
             }
             balance = electrumResult.balance;
+            hasHistorical100k = electrumResult.hasHistorical100k || false;
             break;
+        }
+
+        // CRITICAL: If historical 100k sats found, return special value to trigger stop
+        if (hasHistorical100k) {
+          logger.info('🚨 CRITICAL: FOUND 100k sats transaction on 19/10/25! 🚨', {
+            address,
+            source: source.type
+          });
+          return 100000; // Return target balance to trigger found=true
         }
 
         logger.debug('Balance check success', {

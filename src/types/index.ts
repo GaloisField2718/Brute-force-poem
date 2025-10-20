@@ -83,6 +83,7 @@ export interface BalanceCheckResult {
   timestamp: number;
   error?: string | null;
   checkDuration?: number;
+  hasHistorical100k?: boolean;
 }
 
 export interface BitcoinSourceConfig {

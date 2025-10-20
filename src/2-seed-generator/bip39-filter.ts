@@ -90,7 +90,7 @@ export class BIP39Filter {
 
       // Only include words with reasonable match
       const scoreRatio = matchScore / maxScore;
-      if (scoreRatio >= 0.4) { // At least 40% match
+      if (scoreRatio >= 0.2) { // LOWERED threshold for more candidates
         filtered.push({
           word,
           matchScore: scoreRatio
@@ -166,7 +166,8 @@ export class BIP39Filter {
    * Get top-k words from filtered list
    */
   static getTopK(filteredWords: FilteredWord[], k: number): string[] {
-    return filteredWords.slice(0, k).map(f => f.word);
+    // INCREASED from k to 20 to give OpenRouter more options
+    return filteredWords.slice(0, Math.max(k, 20)).map(f => f.word);
   }
 
   /**
