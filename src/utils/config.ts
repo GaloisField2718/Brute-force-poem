@@ -13,7 +13,7 @@ export class Config {
   // OpenRouter Configuration
   static readonly OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
   static readonly OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-  static readonly OPENROUTER_MODEL = 'anthropic/claude-3.5-sonnet';
+  static readonly OPENROUTER_MODEL = 'anthropic/claude-4.5-sonnet';
 
   // Logging
   static readonly LOG_LEVEL = process.env.LOG_LEVEL || 'info';

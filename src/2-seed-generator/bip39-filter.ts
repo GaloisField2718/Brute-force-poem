@@ -54,6 +54,9 @@ export class BIP39Filter {
     const filtered: FilteredWord[] = [];
     const syllable = await loadSyllable();
 
+    // CRITICAL: Add semantic anchor words for each position
+    const semanticAnchors = this.getSemanticAnchors(blank.position);
+    
     for (const word of this.wordlist) {
       let matchScore = 0;
       let maxScore = 0;
@@ -88,12 +91,19 @@ export class BIP39Filter {
         }
       }
 
-      // Only include words with reasonable match
-      const scoreRatio = matchScore / maxScore;
-      if (scoreRatio >= 0.2) { // LOWERED threshold for more candidates
+      // SEMANTIC BOOST: Give extra score to semantic anchor words
+      if (semanticAnchors.includes(word)) {
+        matchScore += 10; // HUGE boost for semantic words
+      }
+
+      // INCLUDE ALL WORDS - let OpenRouter do the semantic filtering
+      // Only exclude words that are completely wrong (length way off)
+      const lengthDiff2 = Math.abs(word.length - constraints.length);
+      if (lengthDiff2 <= 3) { // Allow up to 3 characters difference
+        const finalScore = matchScore / maxScore;
         filtered.push({
           word,
-          matchScore: scoreRatio
+          matchScore: finalScore
         });
       }
     }
@@ -105,7 +115,8 @@ export class BIP39Filter {
       position: blank.position,
       totalWords: this.wordlist.length,
       filteredCount: filtered.length,
-      topWords: filtered.slice(0, 5).map(f => f.word)
+      topWords: filtered.slice(0, 5).map(f => f.word),
+      semanticAnchors: semanticAnchors
     });
 
     return filtered;
@@ -166,8 +177,30 @@ export class BIP39Filter {
    * Get top-k words from filtered list
    */
   static getTopK(filteredWords: FilteredWord[], k: number): string[] {
-    // INCREASED from k to 20 to give OpenRouter more options
-    return filteredWords.slice(0, Math.max(k, 20)).map(f => f.word);
+    // INCREASED to 50 to give OpenRouter maximum options for semantic analysis
+    return filteredWords.slice(0, Math.max(k, 50)).map(f => f.word);
+  }
+
+  /**
+   * Get semantic anchor words for each position based on poem analysis
+   */
+  private static getSemanticAnchors(position: number): string[] {
+    const anchors: { [key: number]: string[] } = {
+      1: ['prison', 'jail', 'cell', 'cage', 'lock'],
+      2: ['profit', 'gain', 'earn', 'money', 'cash'],
+      3: ['purchase', 'buy', 'acquire', 'obtain', 'get'],
+      4: ['poetry', 'verse', 'rhyme', 'poem', 'song'],
+      5: ['peace', 'calm', 'quiet', 'still', 'rest'],
+      6: ['guided', 'led', 'directed', 'controlled', 'steered'],
+      7: ['dark', 'black', 'night', 'shadow', 'gloom'],
+      8: ['celestial', 'heaven', 'divine', 'sacred', 'holy'],
+      9: ['rest', 'leisure', 'break', 'pause', 'relax'],
+      10: ['truth', 'honest', 'real', 'genuine', 'pure'],
+      11: ['valuable', 'precious', 'treasure', 'gold', 'rich'],
+      12: ['food', 'bread', 'meal', 'soup', 'sweet']
+    };
+
+    return anchors[position] || [];
   }
 
   /**

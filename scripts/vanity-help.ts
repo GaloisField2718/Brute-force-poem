@@ -1,0 +1,52 @@
+/**
+ * Help script for vanity address generation
+ */
+
+console.log('🎯 Bitcoin Taproot Vanity Address Generator');
+console.log('==========================================');
+console.log('');
+console.log('Usage:');
+console.log('  npm run vanity <suffix> [maxSeeds] [maxAddressesPerSeed]');
+console.log('');
+console.log('Examples:');
+console.log('  npm run vanity dive           # Find addresses ending with "dive"');
+console.log('  npm run vanity 123            # Find addresses ending with "123"');
+console.log('  npm run vanity moon           # Find addresses ending with "moon"');
+console.log('  npm run vanity diver 5000000  # 5M seeds for longer suffix');
+console.log('  npm run vanity diver 5000000 500  # 5M seeds, 500 addresses per seed');
+console.log('  npm run vanity bitcoin 10000000 1000 # 10M seeds, 1000 addresses per seed');
+console.log('');
+console.log('Features:');
+console.log('  ✅ Taproot addresses only (bc1p...)');
+console.log('  ✅ Configurable addresses per seed (default: 200)');
+console.log('  ✅ Private key extraction');
+console.log('  ✅ Progress monitoring');
+console.log('  ✅ Results saved to results/vanity-found-*.json');
+console.log('');
+console.log('Technical Details:');
+console.log('  - Derivation paths: m/86\'/0\'/{0,1}\'/0/{0-99}');
+console.log('  - Address format: bc1p... (Taproot Bech32m)');
+console.log('  - Max seeds: 10,000 (configurable)');
+console.log('  - Workers: 8 (configurable via WORKER_COUNT)');
+console.log('');
+console.log('Performance:');
+console.log('  - ~200 addresses per second per worker');
+console.log('  - Expected time for 2-char suffix: Seconds to minutes');
+console.log('  - Expected time for 4-char suffix: Minutes to hours');
+console.log('  - Expected time for 6-char suffix: Hours to days');
+console.log('  - Expected time for 8+ char suffix: Days to weeks');
+console.log('');
+console.log('Max Capacity:');
+console.log('  - Default: 1 million seeds (200M addresses)');
+console.log('  - Custom: Up to 10+ million seeds (2B+ addresses)');
+console.log('  - Suffix length: Up to 15 characters');
+console.log('');
+console.log('Security:');
+console.log('  - Uses cryptographically secure random generation');
+console.log('  - BIP39 compliant seed phrases');
+console.log('  - HD wallet derivation (BIP86)');
+console.log('  - Private keys properly extracted');
+console.log('');
+console.log('For more information, see:');
+console.log('  - BIP86: https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki');
+console.log('  - Taproot: https://bitcoinops.org/en/topics/taproot/');

@@ -72,7 +72,7 @@ class SeedRecoveryOrchestrator {
       for (const blank of blanksToProcess) {
         logger.info(`Filtering position ${blank.position}`);
         const filtered = await BIP39Filter.filterWords(blank, 1);
-        const topWords = BIP39Filter.getTopK(filtered, Config.TOP_K_PER_POSITION);
+        const topWords = BIP39Filter.getTopK(filtered, 50); // INCREASED to 50 for semantic analysis
         candidatesPerPosition.set(blank.position, topWords);
         
         logger.info(`Position ${blank.position}: ${topWords.length} candidates`, {

@@ -4,14 +4,18 @@
   "description": "Bitcoin seed phrase recovery from incomplete poem",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc && tsc workers/seed-checker-worker.ts --outDir dist/workers --module commonjs --target ES2022 --esModuleInterop --skipLibCheck --resolveJsonModule",
+    "build": "tsc && tsc workers/seed-checker-worker.ts --outDir dist/workers --module commonjs --target ES2022 --esModuleInterop --skipLibCheck --resolveJsonModule && tsc workers/vanity-address-worker.ts --outDir dist/workers --module commonjs --target ES2022 --esModuleInterop --skipLibCheck --resolveJsonModule",
     "start": "node dist/main.js",
+    "vanity": "ts-node src/vanity-main.ts",
+    "vanity:build": "tsc src/vanity-main.ts --outDir dist --module commonjs --target ES2022 --esModuleInterop --skipLibCheck --resolveJsonModule && node dist/vanity-main.js",
     "dev": "ts-node src/main.ts",
     "verify": "ts-node scripts/verify-setup.ts",
     "test": "jest",
     "test:derivation": "ts-node scripts/test-derivation.ts",
     "test:bip39": "ts-node scripts/test-bip39.ts",
-    "test:apis": "ts-node scripts/check-apis.ts"
+    "test:apis": "ts-node scripts/check-apis.ts",
+    "test:vanity": "ts-node scripts/test-taproot-vanity.ts",
+    "vanity:help": "ts-node scripts/vanity-help.ts"
   },
   "keywords": ["bitcoin", "bip39", "seed", "recovery"],
   "author": "",

@@ -37,10 +37,10 @@ export class HDWallet {
 
   /**
    * Generate Legacy P2PKH address (BIP44)
-   * Path: m/44'/0'/0'/0/index
+   * Path: m/44'/0'/account'/0/index
    */
-  deriveLegacyAddress(index: number): string {
-    const path = `m/44'/0'/0'/0/${index}`;
+  deriveLegacyAddress(index: number, account: number = 0): string {
+    const path = `m/44'/0'/${account}'/0/${index}`;
     const child = this.derivePath(path);
     
     const { address } = bitcoin.payments.p2pkh({
@@ -57,10 +57,10 @@ export class HDWallet {
 
   /**
    * Generate Nested SegWit P2SH-P2WPKH address (BIP49)
-   * Path: m/49'/0'/0'/0/index
+   * Path: m/49'/0'/account'/0/index
    */
-  deriveNestedSegWitAddress(index: number): string {
-    const path = `m/49'/0'/0'/0/${index}`;
+  deriveNestedSegWitAddress(index: number, account: number = 0): string {
+    const path = `m/49'/0'/${account}'/0/${index}`;
     const child = this.derivePath(path);
 
     const { address } = bitcoin.payments.p2sh({
@@ -80,10 +80,10 @@ export class HDWallet {
 
   /**
    * Generate Native SegWit Bech32 address (BIP84)
-   * Path: m/84'/0'/0'/0/index
+   * Path: m/84'/0'/account'/0/index
    */
-  deriveNativeSegWitAddress(index: number): string {
-    const path = `m/84'/0'/0'/0/${index}`;
+  deriveNativeSegWitAddress(index: number, account: number = 0): string {
+    const path = `m/84'/0'/${account}'/0/${index}`;
     const child = this.derivePath(path);
 
     const { address } = bitcoin.payments.p2wpkh({
@@ -100,10 +100,10 @@ export class HDWallet {
 
   /**
    * Generate Taproot Bech32m address (BIP86)
-   * Path: m/86'/0'/0'/0/index
+   * Path: m/86'/0'/account'/0/index
    */
-  deriveTaprootAddress(index: number): string {
-    const path = `m/86'/0'/0'/0/${index}`;
+  deriveTaprootAddress(index: number, account: number = 0): string {
+    const path = `m/86'/0'/${account}'/0/${index}`;
     const child = this.derivePath(path);
 
     // For Taproot, we need to use the x-only public key (32 bytes)
@@ -127,6 +127,33 @@ export class HDWallet {
    */
   getXPub(): string {
     return this.root.toBase58();
+  }
+
+  /**
+   * Get private key for a specific address type, account, and index
+   */
+  getPrivateKey(type: string, account: number, index: number): string {
+    let path: string;
+    
+    switch (type) {
+      case 'legacy':
+        path = `m/44'/0'/${account}'/0/${index}`;
+        break;
+      case 'nested-segwit':
+        path = `m/49'/0'/${account}'/0/${index}`;
+        break;
+      case 'native-segwit':
+        path = `m/84'/0'/${account}'/0/${index}`;
+        break;
+      case 'taproot':
+        path = `m/86'/0'/${account}'/0/${index}`;
+        break;
+      default:
+        throw new Error(`Unknown address type: ${type}`);
+    }
+
+    const child = this.derivePath(path);
+    return child.privateKey!.toString('hex');
   }
 
   /**

@@ -37,6 +37,18 @@ export class OpenRouterClient {
     blank: PoemBlank,
     candidateWords: string[]
   ): Promise<ScoredCandidate[]> {
+    // CRITICAL: First ask the AI to analyze the poem and suggest the EXACT word
+    const poemAnalysis = await this.analyzePoemAndSuggestWord(blank);
+    
+    // If AI suggests a word that's in BIP39, prioritize it
+    if (poemAnalysis.suggestedWord && candidateWords.includes(poemAnalysis.suggestedWord)) {
+      return [{
+        word: poemAnalysis.suggestedWord,
+        score: 1.0,
+        reason: `AI poem analysis suggests: ${poemAnalysis.suggestedWord}`
+      }];
+    }
+    
     const prompt = this.buildPrompt(blank, candidateWords);
 
     try {
@@ -178,6 +190,79 @@ The Bitcoin seed phrase likely follows this semantic pattern (these are EXAMPLES
 ]
 
 Return ONLY the JSON array, nothing else.`;
+  }
+
+  /**
+   * CRITICAL: Analyze the poem and suggest the EXACT word for this position
+   */
+  private async analyzePoemAndSuggestWord(blank: PoemBlank): Promise<{suggestedWord: string | null}> {
+    const analysisPrompt = `You are a poetry expert analyzing a Bitcoin seed phrase hidden in a poem.
+
+**COMPLETE POEM:**
+"In freedom of thought, I dream beyond _____'s wall,
+Losing through loss yet learning what ____s call.
+To sell a moment, then ______ it from time,
+An empty heart echoes — a ______ without rhyme.
+I've had insufficient hope of ______ to be still,
+Once released from the current, now _____ by will.
+The soothe becomes ____ in the rush of the night,
+The individual drifts into the ______'s soft light.
+From work to ____, from misleading to ______,
+A salad becomes _____ — both fortune and fate.
+And life, like warm soup or sweet _____ at ease,
+Is richest when tasted uncertain — to please."
+
+**CURRENT POSITION:** ${blank.position}
+**CONTEXT:** "${blank.context}"
+
+**TASK:** Analyze the poem and suggest the EXACT BIP39 word that should fill this blank.
+
+**ANALYSIS:**
+- Line 1: "dream beyond _____'s wall" → PRISON (obvious!)
+- Line 2: "what ____s call" → PROFIT (financial gain!)
+- Line 3: "then ______ it from time" → PURCHASE (buy/acquire!)
+- Line 4: "a ______ without rhyme" → POETRY (poetic expression!)
+- Line 5: "hope of ______ to be still" → PEACE (tranquility!)
+- Line 6: "now _____ by will" → GUIDED (controlled!)
+- Line 7: "becomes ____ in the night" → DARK (darkness!)
+- Line 8: "the ______'s soft light" → CELESTIAL (heavenly!)
+- Line 9: "From work to ____" → REST (leisure!)
+- Line 10: "from misleading to ______" → TRUTH (honesty!)
+- Line 11: "becomes _____ — both fortune and fate" → VALUABLE (precious!)
+- Line 12: "sweet _____ at ease" → FOOD (comfort!)
+
+**RESPONSE FORMAT (JSON only):**
+{"suggestedWord": "exact_bip39_word"}
+
+Return ONLY the JSON object, nothing else.`;
+
+    try {
+      const response = await this.client.post('/chat/completions', {
+        model: Config.OPENROUTER_MODEL,
+        temperature: 0.1, // Low temperature for precise analysis
+        max_tokens: 100,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a poetry expert analyzing Bitcoin seed phrases. Return only valid JSON.'
+          },
+          {
+            role: 'user',
+            content: analysisPrompt
+          }
+        ]
+      });
+
+      const content = response.data.choices[0]?.message?.content;
+      if (content) {
+        const parsed = JSON.parse(content);
+        return { suggestedWord: parsed.suggestedWord || null };
+      }
+    } catch (error: any) {
+      logger.debug('Poem analysis failed', { error: error.message });
+    }
+
+    return { suggestedWord: null };
   }
 
   /**
